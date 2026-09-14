@@ -1,3 +1,4 @@
+import { defaultPet, isPetSpecies, type Pet } from "./pet.ts";
 export type Food = {
   id: string;
   name: string;
@@ -168,6 +169,7 @@ export type Entry = {
   meal: Meal;
 };
 export type Weight = { date: string; value: number };
+export type { Pet };
 export type Profile = {
   name: string;
   calories: number;
@@ -185,6 +187,7 @@ export type State = {
   weights: Weight[];
   favorites: string[];
   customFoods: Food[];
+  pet: Pet;
 };
 export const initialState: State = {
   version: 1,
@@ -202,6 +205,7 @@ export const initialState: State = {
   weights: [],
   favorites: [],
   customFoods: [],
+  pet: defaultPet,
 };
 export function dateKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -254,6 +258,8 @@ export function parseState(raw: string): State {
   const s = JSON.parse(raw);
   // Backwards-compatible migration: v1 diaries had no custom food catalogue.
   if (s && s.customFoods === undefined) s.customFoods = [];
+  // Same for the avatar: older diaries predate it, so they start on the default.
+  if (s && s.pet === undefined) s.pet = defaultPet;
   if (!Array.isArray(s?.customFoods) || !s.customFoods.every(validCustomFood))
     throw Error("รายการอาหารที่บันทึกไว้ไม่ถูกต้อง");
   const catalog = [...foods, ...s.customFoods];
@@ -267,6 +273,9 @@ export function parseState(raw: string): State {
     !Number.isNaN(Date.parse(x));
   if (
     s?.version !== 1 ||
+    !s.pet ||
+    typeof s.pet !== "object" ||
+    !isPetSpecies(s.pet.species) ||
     typeof s.profile?.name !== "string" ||
     !["calories", "protein", "carbs", "fat", "water", "targetWeight"].every(
       (k) => positive(s.profile[k]),

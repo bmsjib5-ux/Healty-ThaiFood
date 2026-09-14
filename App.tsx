@@ -32,6 +32,7 @@ import {
   Home,
   Leaf,
   Minus,
+  PawPrint,
   Plus,
   Search,
   ShieldCheck,
@@ -60,6 +61,16 @@ import {
 import { C, s } from "./src/styles";
 import { FoodPhoto } from "./src/FoodPhoto";
 import { CustomFoodModal } from "./src/CustomFoodModal";
+import { PetAvatar } from "./src/PetAvatar";
+import {
+  moodText,
+  petMood,
+  petShape,
+  shapeLabel,
+  shapeText,
+  species,
+  type PetSpecies,
+} from "./src/pet.ts";
 import * as ImagePicker from "expo-image-picker";
 
 // Keeps the pre-rename key: renaming it would orphan every existing diary.
@@ -236,11 +247,11 @@ function Macro({
 export default function App() {
   return (
     <SafeAreaProvider>
-      <NutriApp />
+      <AmHealtyApp />
     </SafeAreaProvider>
   );
 }
-function NutriApp() {
+function AmHealtyApp() {
   const [createOpen, setCreateOpen] = useState(false);
   const [recovered, setRecovered] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -264,6 +275,7 @@ function NutriApp() {
     [unit, setUnit] = useState<"serving" | "grams">("serving"),
     [meal, setMeal] = useState<Meal>("กลางวัน"),
     [error, setError] = useState("");
+  const [petOpen, setPetOpen] = useState(false);
   const [weightOpen, setWeightOpen] = useState(false),
     [weight, setWeight] = useState(""),
     [period, setPeriod] = useState(30);
@@ -391,6 +403,11 @@ function NutriApp() {
     setTab("today");
     setToast(`เพิ่ม${selected.name}ในมื้อ${meal}แล้ว`);
   }
+  function choosePet(next: PetSpecies, name: string) {
+    commit((d) => ({ ...d, pet: { species: next } }));
+    setPetOpen(false);
+    setToast(`เปลี่ยนเป็น${name}แล้ว`);
+  }
   function toggleFavorite(id: string) {
     commit((d) => ({
       ...d,
@@ -450,6 +467,12 @@ function NutriApp() {
       ? nutrition(selected, selectedGrams)
       : { kcal: 0, protein: 0, carbs: 0, fat: 0 };
   const remaining = Math.round(data.profile.calories) - Math.round(total.kcal);
+  // The avatar mirrors the day on screen: build from the latest weigh-in, mood
+  // from what has been logged for the day being viewed.
+  const shape = petShape(latest?.value, data.profile.targetWeight),
+    mood = petMood(total.kcal, data.profile.calories),
+    petName =
+      species.find((sp) => sp.id === data.pet.species)?.name ?? "สัตว์เลี้ยง";
   function datePicker() {
     return (
       <View style={s.datePicker}>
@@ -558,7 +581,7 @@ function NutriApp() {
                   <T style={s.eyebrow}>
                     {desktop
                       ? "YOUR DAILY BALANCE"
-                      : "NUTRI THAI  /  สุขภาพดีทุกวัน"}
+                      : "AMHEALTY  /  สุขภาพดีทุกวัน"}
                   </T>
                   <T accessibilityRole="header" style={s.title}>
                     {tab === "today"
@@ -611,6 +634,51 @@ function NutriApp() {
                   style={[s.columns, !desktop && { flexDirection: "column" }]}
                 >
                   <View style={{ flex: 1.35, gap: 20 }}>
+                    <Card>
+                      <View style={s.between}>
+                        <View style={s.row}>
+                          <PawPrint size={21} color={C.green} />
+                          <T style={s.cardTitle}>เพื่อนร่วมทาง</T>
+                        </View>
+                        <View style={s.badge}>
+                          <T style={s.badgeText}>{shapeLabel[shape]}</T>
+                        </View>
+                      </View>
+                      <View
+                        accessibilityRole="image"
+                        accessibilityLabel={`${petName} ${shapeLabel[shape]} ${moodText[mood]}`}
+                        style={{ alignItems: "center", paddingTop: 14 }}
+                      >
+                        <PetAvatar
+                          species={data.pet.species}
+                          shape={shape}
+                          mood={mood}
+                          size={desktop ? 172 : 146}
+                        />
+                      </View>
+                      <T
+                        style={[
+                          s.cardTitle,
+                          { textAlign: "center", marginTop: 6 },
+                        ]}
+                      >
+                        {moodText[mood]}
+                      </T>
+                      <T
+                        style={[
+                          s.caption,
+                          { textAlign: "center", marginTop: 4, marginBottom: 16 },
+                        ]}
+                      >
+                        {shapeText[shape]}
+                      </T>
+                      <Button
+                        label="เปลี่ยนตัวละคร"
+                        icon={PawPrint}
+                        secondary
+                        onPress={() => setPetOpen(true)}
+                      />
+                    </Card>
                     <Card>
                       <View style={s.between}>
                         <View style={s.row}>
@@ -1297,7 +1365,7 @@ function NutriApp() {
               <View style={s.footer}>
                 <Leaf size={15} color={C.muted} />
                 <T style={[s.caption, { fontSize: 11 }]}>
-                  NUTRI THAI · ดูแลตัวเอง ทีละมื้อ
+                  AMHEALTY · ดูแลตัวเอง ทีละมื้อ
                 </T>
               </View>
             </View>
@@ -1357,6 +1425,59 @@ function NutriApp() {
           </T>
         </View>
       )}
+      <Modal
+        transparent
+        visible={petOpen}
+        animationType="fade"
+        onRequestClose={() => setPetOpen(false)}
+      >
+        <View style={s.overlay}>
+          <View accessibilityViewIsModal style={s.modal}>
+            <ScrollView contentContainerStyle={{ padding: 25, gap: 18 }}>
+              <View style={s.between}>
+                <T style={s.cardTitle}>เลือกตัวละคร</T>
+                <IconButton
+                  label="ปิดหน้าต่าง"
+                  icon={X}
+                  onPress={() => setPetOpen(false)}
+                />
+              </View>
+              <T style={s.caption}>
+                ตัวละครจะอ้วนหรือผอมตามน้ำหนักล่าสุดเทียบกับเป้าหมาย
+                และหิวหรืออิ่มตามมื้อที่บันทึกไว้ในวันนั้น
+              </T>
+              <View style={s.petGrid}>
+                {species.map((sp) => (
+                  <Pressable
+                    key={sp.id}
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      selected: data.pet.species === sp.id,
+                    }}
+                    accessibilityLabel={sp.name}
+                    onPress={() => choosePet(sp.id, sp.name)}
+                    style={[
+                      s.petChoice,
+                      data.pet.species === sp.id && {
+                        borderColor: C.green,
+                        backgroundColor: C.soft,
+                      },
+                    ]}
+                  >
+                    <PetAvatar
+                      species={sp.id}
+                      shape={shape}
+                      mood={mood}
+                      size={92}
+                    />
+                    <T style={s.label}>{sp.name}</T>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       <Modal
         transparent
         visible={!!selected || weightOpen}
