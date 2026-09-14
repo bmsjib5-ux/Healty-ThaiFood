@@ -2,6 +2,7 @@
 let database: Promise<IDBDatabase> | undefined;
 function db() {
   return (database ??= new Promise<IDBDatabase>((resolve, reject) => {
+    // Keeps the pre-rename name: renaming it would orphan every saved photo.
     const request = indexedDB.open("nutri-thai-photos", 1);
     request.onupgradeneeded = () => request.result.createObjectStore("photos");
     request.onsuccess = () => resolve(request.result);

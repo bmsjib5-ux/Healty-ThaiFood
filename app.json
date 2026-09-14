@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Nutri Thai",
-    "slug": "nutri-thai",
+    "name": "AmHealty",
+    "slug": "amhealty",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,7 +11,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#4CB560",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -26,8 +26,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "อนุญาตให้ Nutri Thai ถ่ายรูปอาหารของคุณ",
-          "photosPermission": "อนุญาตให้ Nutri Thai เลือกรูปอาหารจากคลังรูป",
+          "cameraPermission": "อนุญาตให้ AmHealty ถ่ายรูปอาหารของคุณ",
+          "photosPermission": "อนุญาตให้ AmHealty เลือกรูปอาหารจากคลังรูป",
           "microphonePermission": false
         }
       ]

@@ -39,5 +39,5 @@ http
     }
   })
   .listen(port, "127.0.0.1", () =>
-    console.log(`Nutri Thai preview: http://localhost:${port}`),
+    console.log(`AmHealty preview: http://localhost:${port}`),
   );

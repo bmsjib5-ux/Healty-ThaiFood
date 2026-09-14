@@ -1,4 +1,4 @@
-# Nutri Thai
+# AmHealty
 
 แอป React Native + Expo + TypeScript ตามแนวคิด UI ภาษาไทยที่ออกแบบไว้: สีเขียวธรรมชาติ ครีม และการ์ดสารอาหารสีอ่อน
 

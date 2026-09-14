@@ -62,6 +62,7 @@ import { FoodPhoto } from "./src/FoodPhoto";
 import { CustomFoodModal } from "./src/CustomFoodModal";
 import * as ImagePicker from "expo-image-picker";
 
+// Keeps the pre-rename key: renaming it would orphan every existing diary.
 const STORE = "nutri-thai:v1";
 type Tab = "today" | "food" | "trends" | "profile";
 const tabs = [
@@ -482,7 +483,7 @@ function NutriApp() {
     return (
       <View style={[s.root, s.center]}>
         <Leaf color={C.green} size={38} />
-        <T style={s.title}>Nutri Thai</T>
+        <T style={s.title}>AmHealty</T>
         {storageError ? (
           <T style={s.error}>{storageError}</T>
         ) : (
@@ -501,7 +502,7 @@ function NutriApp() {
                 <Leaf size={25} color="white" />
               </View>
               <View>
-                <T style={s.brandName}>Nutri Thai</T>
+                <T style={s.brandName}>AmHealty</T>
                 <T style={s.caption}>สุขภาพดี เริ่มที่มื้อของคุณ</T>
               </View>
             </View>
