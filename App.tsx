@@ -64,9 +64,12 @@ import { CustomFoodModal } from "./src/CustomFoodModal";
 import { PetAvatar } from "./src/PetAvatar";
 import { PetStage } from "./src/PetStage";
 import {
+  MAX_PET_NAME,
+  cleanPetName,
   moodText,
   petMood,
   petShape,
+  petTitle,
   shapeLabel,
   shapeText,
   species,
@@ -276,7 +279,9 @@ function AmHealtyApp() {
     [unit, setUnit] = useState<"serving" | "grams">("serving"),
     [meal, setMeal] = useState<Meal>("กลางวัน"),
     [error, setError] = useState("");
-  const [petOpen, setPetOpen] = useState(false);
+  const [petOpen, setPetOpen] = useState(false),
+    [petNameDraft, setPetNameDraft] = useState(""),
+    [petError, setPetError] = useState("");
   // Held here rather than in the pet: logging a meal returns to this tab and
   // remounts it, so the request to hop has to outlive that remount.
   const [celebrate, setCelebrate] = useState(0);
@@ -408,10 +413,32 @@ function AmHealtyApp() {
     setCelebrate((c) => c + 1);
     setToast(`เพิ่ม${selected.name}ในมื้อ${meal}แล้ว`);
   }
-  function choosePet(next: PetSpecies, name: string) {
-    commit((d) => ({ ...d, pet: { species: next } }));
+  function openPet() {
+    setPetNameDraft(data.pet.name ?? "");
+    setPetError("");
+    setPetOpen(true);
+  }
+  function choosePet(next: PetSpecies) {
+    // Keeps the sheet open so the preview updates while the name is still
+    // being typed; the name is what "เสร็จแล้ว" commits.
+    commit((d) => ({ ...d, pet: { ...d.pet, species: next } }));
+  }
+  function savePet() {
+    let name: string | undefined;
+    try {
+      name = cleanPetName(petNameDraft);
+    } catch (e) {
+      setPetError((e as Error).message);
+      return;
+    }
+    // Omitting the key rather than storing "" keeps a cleared name out of the
+    // saved diary entirely.
+    commit((d) => ({
+      ...d,
+      pet: { species: d.pet.species, ...(name ? { name } : {}) },
+    }));
     setPetOpen(false);
-    setToast(`เปลี่ยนเป็น${name}แล้ว`);
+    setToast(name ? `ตั้งชื่อว่า ${name} แล้ว` : "บันทึกสัตว์เลี้ยงแล้ว");
   }
   function toggleFavorite(id: string) {
     commit((d) => ({
@@ -644,7 +671,7 @@ function AmHealtyApp() {
                       <View style={s.between}>
                         <View style={s.row}>
                           <PawPrint size={21} color={C.green} />
-                          <T style={s.cardTitle}>เพื่อนร่วมทาง</T>
+                          <T style={s.cardTitle}>{petTitle(data.pet)}</T>
                         </View>
                         <View style={s.badge}>
                           <T style={s.badgeText}>{shapeLabel[shape]}</T>
@@ -652,7 +679,7 @@ function AmHealtyApp() {
                       </View>
                       <View
                         accessibilityRole="image"
-                        accessibilityLabel={`${petName} ${shapeLabel[shape]} ${moodText[mood]}`}
+                        accessibilityLabel={`${petTitle(data.pet)} (${petName}) ${shapeLabel[shape]} ${moodText[mood]}`}
                         style={{ alignItems: "center", paddingTop: 14 }}
                       >
                         <PetStage
@@ -681,10 +708,10 @@ function AmHealtyApp() {
                         {shapeText[shape]}
                       </T>
                       <Button
-                        label="เปลี่ยนตัวละคร"
+                        label="ตั้งค่าสัตว์เลี้ยง"
                         icon={PawPrint}
                         secondary
-                        onPress={() => setPetOpen(true)}
+                        onPress={openPet}
                       />
                     </Card>
                     <Card>
@@ -1439,17 +1466,36 @@ function AmHealtyApp() {
         animationType="fade"
         onRequestClose={() => setPetOpen(false)}
       >
-        <View style={s.overlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={s.overlay}
+        >
           <View accessibilityViewIsModal style={s.modal}>
-            <ScrollView contentContainerStyle={{ padding: 25, gap: 18 }}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ padding: 25, gap: 18 }}
+            >
               <View style={s.between}>
-                <T style={s.cardTitle}>เลือกตัวละคร</T>
+                <T style={s.cardTitle}>สัตว์เลี้ยงของคุณ</T>
                 <IconButton
                   label="ปิดหน้าต่าง"
                   icon={X}
                   onPress={() => setPetOpen(false)}
                 />
               </View>
+              <Field
+                label={`ตั้งชื่อ (ไม่เกิน ${MAX_PET_NAME} ตัวอักษร เว้นว่างได้)`}
+                value={petNameDraft}
+                onChange={(v) => {
+                  setPetNameDraft(v);
+                  setPetError("");
+                }}
+              />
+              {!!petError && (
+                <T accessibilityRole="alert" style={s.error}>
+                  {petError}
+                </T>
+              )}
               <T style={s.caption}>
                 ตัวละครจะอ้วนหรือผอมตามน้ำหนักล่าสุดเทียบกับเป้าหมาย
                 และหิวหรืออิ่มตามมื้อที่บันทึกไว้ในวันนั้น
@@ -1463,7 +1509,7 @@ function AmHealtyApp() {
                       selected: data.pet.species === sp.id,
                     }}
                     accessibilityLabel={sp.name}
-                    onPress={() => choosePet(sp.id, sp.name)}
+                    onPress={() => choosePet(sp.id)}
                     style={[
                       s.petChoice,
                       data.pet.species === sp.id && {
@@ -1482,9 +1528,10 @@ function AmHealtyApp() {
                   </Pressable>
                 ))}
               </View>
+              <Button label="เสร็จแล้ว" icon={Check} onPress={savePet} />
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       <Modal
         transparent

@@ -3,7 +3,7 @@
 export type PetSpecies = "cat" | "rabbit" | "bear" | "penguin";
 export type PetShape = "slim" | "fit" | "chubby" | "round";
 export type PetMood = "hungry" | "peckish" | "content" | "full" | "stuffed";
-export type Pet = { species: PetSpecies };
+export type Pet = { species: PetSpecies; name?: string };
 
 export type SpeciesInfo = {
   id: PetSpecies;
@@ -19,6 +19,30 @@ export const species: SpeciesInfo[] = [
   { id: "penguin", name: "เพนกวิน", fur: "#3F5566", belly: "#F2F4F3", accent: "#E9A23B" },
 ];
 export const defaultPet: Pet = { species: "cat" };
+
+export const MAX_PET_NAME = 30;
+
+// A name is optional: an unnamed pet keeps the generic heading rather than
+// being labelled with its species, which reads like a placeholder.
+export function isPetName(x: unknown): x is string {
+  return (
+    typeof x === "string" &&
+    x.trim().length > 0 &&
+    x.trim().length <= MAX_PET_NAME
+  );
+}
+// Normalises what the user typed: trimmed, or dropped entirely when blank, so
+// an empty field is stored as "no name" rather than as an empty string.
+export function cleanPetName(raw: string): string | undefined {
+  const name = raw.trim();
+  if (!name) return undefined;
+  if (name.length > MAX_PET_NAME)
+    throw Error(`ตั้งชื่อได้ไม่เกิน ${MAX_PET_NAME} ตัวอักษร`);
+  return name;
+}
+export function petTitle(pet: Pet): string {
+  return pet.name ?? "เพื่อนร่วมทาง";
+}
 
 export function isPetSpecies(x: unknown): x is PetSpecies {
   return species.some((s) => s.id === x);
