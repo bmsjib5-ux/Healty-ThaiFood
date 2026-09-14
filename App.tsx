@@ -63,6 +63,7 @@ import { FoodPhoto } from "./src/FoodPhoto";
 import { CustomFoodModal } from "./src/CustomFoodModal";
 import { PetAvatar } from "./src/PetAvatar";
 import { PetStage } from "./src/PetStage";
+import { Onboarding } from "./src/Onboarding";
 import {
   MAX_PET_NAME,
   cleanPetName,
@@ -86,6 +87,22 @@ const tabs = [
   { id: "trends" as Tab, label: "สถิติ", icon: BarChart3 },
   { id: "profile" as Tab, label: "โปรไฟล์", icon: User },
 ];
+// The targets screen edits these fields only; the rest of the profile holds the
+// onboarding answers and is merged back on save rather than rebuilt from a form.
+const editableTargets = [
+  "name",
+  "calories",
+  "protein",
+  "carbs",
+  "fat",
+  "water",
+  "targetWeight",
+] as const;
+type EditableTarget = (typeof editableTargets)[number];
+const fillDraft = (p: Profile) =>
+  Object.fromEntries(
+    editableTargets.map((k) => [k, String(p[k])]),
+  ) as Record<EditableTarget, string>;
 const fmt = (v: number) => Math.round(v).toLocaleString("en-US");
 const thaiDate = (d: string) =>
   new Date(d + "T12:00:00").toLocaleDateString("th-TH", {
@@ -288,7 +305,7 @@ function AmHealtyApp() {
   const [weightOpen, setWeightOpen] = useState(false),
     [weight, setWeight] = useState(""),
     [period, setPeriod] = useState(30);
-  const [draft, setDraft] = useState<Record<keyof Profile, string>>({
+  const [draft, setDraft] = useState<Record<EditableTarget, string>>({
     name: "",
     calories: "1800",
     protein: "100",
@@ -324,11 +341,7 @@ function AmHealtyApp() {
         const value = raw ? parseState(raw) : initialState;
         current.current = value;
         setData(value);
-        setDraft(
-          Object.fromEntries(
-            Object.entries(value.profile).map(([k, v]) => [k, String(v)]),
-          ) as any,
-        );
+        setDraft(fillDraft(value.profile));
         setReady(true);
       })
       .catch(() =>
@@ -454,7 +467,7 @@ function AmHealtyApp() {
         k,
         k === "name" ? v.trim() : Number(v),
       ]),
-    ) as Profile;
+    ) as Pick<Profile, EditableTarget>;
     const limits: Record<string, [number, number]> = {
       calories: [500, 10000],
       protein: [1, 1000],
@@ -464,13 +477,13 @@ function AmHealtyApp() {
       targetWeight: [20, 400],
     };
     for (const [k, [min, max]] of Object.entries(limits)) {
-      const n = p[k as keyof Profile];
+      const n = p[k as EditableTarget];
       if (typeof n !== "number" || !Number.isFinite(n) || n < min || n > max) {
         setError(`กรุณาตรวจสอบช่องเป้าหมาย: ต้องอยู่ระหว่าง ${min}–${max}`);
         return;
       }
     }
-    commit((d) => ({ ...d, profile: p }));
+    commit((d) => ({ ...d, profile: { ...d.profile, ...p } }));
     setError("");
     setToast("บันทึกเป้าหมายแล้ว");
   }
@@ -546,6 +559,37 @@ function AmHealtyApp() {
           <ActivityIndicator color={C.green} />
         )}
       </View>
+    );
+  // The opening questions stand in for the whole app until they are answered.
+  // Existing diaries are migrated as already answered, so only a fresh install
+  // lands here.
+  if (!data.profile.onboarded)
+    return (
+      <SafeAreaView style={s.root}>
+        <StatusBar style="dark" />
+        <Onboarding
+          pet={data.pet}
+          onDone={(profile, pet, weightKg) => {
+            void commit((d) => ({
+              ...d,
+              profile: { ...d.profile, ...profile },
+              pet,
+              // The answers include a weigh-in, so the diary starts with one
+              // rather than asking for the same number again.
+              weights: saveWeight(d.weights, dateKey(), weightKg),
+            }));
+            setDraft((old) => ({
+              ...old,
+              ...Object.fromEntries(
+                editableTargets
+                  .filter((k) => profile[k] !== undefined)
+                  .map((k) => [k, String(profile[k])]),
+              ),
+            }));
+            setToast("ตั้งค่าเรียบร้อย เริ่มบันทึกมื้อแรกได้เลย");
+          }}
+        />
+      </SafeAreaView>
     );
   return (
     <SafeAreaView style={s.root}>
@@ -1362,7 +1406,7 @@ function AmHealtyApp() {
                           ["fat", "ไขมัน (กรัม)"],
                           ["water", "น้ำดื่ม (มล.)"],
                           ["targetWeight", "น้ำหนักเป้าหมาย (กก.)"],
-                        ] as [keyof Profile, string][]
+                        ] as [EditableTarget, string][]
                       ).map(([k, label]) => (
                         <Field
                           key={k}

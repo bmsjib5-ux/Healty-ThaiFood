@@ -4,6 +4,17 @@ import {
   isPetSpecies,
   type Pet,
 } from "./pet.ts";
+import {
+  isActivity,
+  isGoal,
+  isPace,
+  isSex,
+  inRange,
+  type Activity,
+  type Goal,
+  type Pace,
+  type Sex,
+} from "./onboarding.ts";
 export type Food = {
   id: string;
   name: string;
@@ -183,6 +194,16 @@ export type Profile = {
   fat: number;
   water: number;
   targetWeight: number;
+  // Answers from the opening questions. They are kept so the targets can be
+  // recalculated later, not just applied once.
+  sex: Sex;
+  age: number;
+  height: number;
+  activity: Activity;
+  goal: Goal;
+  pace: Pace;
+  /** False only until the opening questions have been answered. */
+  onboarded: boolean;
 };
 export type State = {
   version: 1;
@@ -204,6 +225,13 @@ export const initialState: State = {
     fat: 56,
     water: 2000,
     targetWeight: 65,
+    sex: "unspecified",
+    age: 30,
+    height: 165,
+    activity: "light",
+    goal: "health",
+    pace: "steady",
+    onboarded: false,
   },
   entries: [],
   water: {},
@@ -265,6 +293,20 @@ export function parseState(raw: string): State {
   if (s && s.customFoods === undefined) s.customFoods = [];
   // Same for the avatar: older diaries predate it, so they start on the default.
   if (s && s.pet === undefined) s.pet = defaultPet;
+  // A diary saved before the opening questions existed belongs to someone who
+  // is already using the app, so it is marked answered rather than sending them
+  // back through onboarding with data already in hand.
+  if (s?.profile && s.profile.onboarded === undefined)
+    s.profile = {
+      sex: "unspecified",
+      age: 30,
+      height: 165,
+      activity: "light",
+      goal: "health",
+      pace: "steady",
+      ...s.profile,
+      onboarded: true,
+    };
   if (!Array.isArray(s?.customFoods) || !s.customFoods.every(validCustomFood))
     throw Error("รายการอาหารที่บันทึกไว้ไม่ถูกต้อง");
   const catalog = [...foods, ...s.customFoods];
@@ -283,6 +325,13 @@ export function parseState(raw: string): State {
     !isPetSpecies(s.pet.species) ||
     (s.pet.name !== undefined && !isPetName(s.pet.name)) ||
     typeof s.profile?.name !== "string" ||
+    typeof s.profile.onboarded !== "boolean" ||
+    !isSex(s.profile.sex) ||
+    !isActivity(s.profile.activity) ||
+    !isGoal(s.profile.goal) ||
+    !isPace(s.profile.pace) ||
+    !inRange(s.profile.age, "age") ||
+    !inRange(s.profile.height, "height") ||
     !["calories", "protein", "carbs", "fat", "water", "targetWeight"].every(
       (k) => positive(s.profile[k]),
     ) ||
