@@ -6,6 +6,7 @@ import {
   petMood,
   petShape,
   shapeWidth,
+  shade,
   species,
   speciesInfo,
 } from "../src/pet.ts";
@@ -89,4 +90,35 @@ test("choosing a pet leaves the rest of the diary untouched", () => {
   assert.equal(parsed.pet.species, "penguin");
   assert.deepEqual(parsed.entries, []);
   assert.deepEqual(parsed.profile, initialState.profile);
+});
+
+test("shading stays a valid colour and moves in the right direction", () => {
+  const base = "#8A6248";
+  for (const amount of [-1, -0.5, -0.2, 0, 0.2, 0.5, 1]) {
+    assert.match(shade(base, amount), /^#[0-9a-f]{6}$/);
+  }
+  assert.equal(shade(base, 0), base.toLowerCase());
+  assert.equal(shade(base, 1), "#ffffff");
+  assert.equal(shade(base, -1), "#000000");
+  const lum = (hex) =>
+    parseInt(hex.slice(1, 3), 16) +
+    parseInt(hex.slice(3, 5), 16) +
+    parseInt(hex.slice(5, 7), 16);
+  assert.ok(lum(shade(base, 0.3)) > lum(base));
+  assert.ok(lum(shade(base, -0.3)) < lum(base));
+  // Out-of-range amounts clamp instead of producing an unparseable colour.
+  assert.equal(shade(base, 5), "#ffffff");
+  assert.equal(shade(base, -5), "#000000");
+});
+
+test("every species shades without throwing, so no avatar can fail to draw", () => {
+  for (const sp of species)
+    for (const colour of [sp.fur, sp.belly, sp.accent])
+      for (const amount of [-0.4, -0.24, 0.1, 0.26, 0.35])
+        assert.match(shade(colour, amount), /^#[0-9a-f]{6}$/);
+});
+
+test("shading rejects anything that is not a #rrggbb colour", () => {
+  for (const bad of ["red", "#fff", "#GGGGGG", "", "#1234567"])
+    assert.throws(() => shade(bad, 0.2));
 });

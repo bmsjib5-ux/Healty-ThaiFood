@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
@@ -62,6 +62,7 @@ import { C, s } from "./src/styles";
 import { FoodPhoto } from "./src/FoodPhoto";
 import { CustomFoodModal } from "./src/CustomFoodModal";
 import { PetAvatar } from "./src/PetAvatar";
+import { PetStage } from "./src/PetStage";
 import {
   moodText,
   petMood,
@@ -276,6 +277,9 @@ function AmHealtyApp() {
     [meal, setMeal] = useState<Meal>("กลางวัน"),
     [error, setError] = useState("");
   const [petOpen, setPetOpen] = useState(false);
+  // Held here rather than in the pet: logging a meal returns to this tab and
+  // remounts it, so the request to hop has to outlive that remount.
+  const [celebrate, setCelebrate] = useState(0);
   const [weightOpen, setWeightOpen] = useState(false),
     [weight, setWeight] = useState(""),
     [period, setPeriod] = useState(30);
@@ -401,6 +405,7 @@ function AmHealtyApp() {
     }));
     setSelected(null);
     setTab("today");
+    setCelebrate((c) => c + 1);
     setToast(`เพิ่ม${selected.name}ในมื้อ${meal}แล้ว`);
   }
   function choosePet(next: PetSpecies, name: string) {
@@ -473,6 +478,7 @@ function AmHealtyApp() {
     mood = petMood(total.kcal, data.profile.calories),
     petName =
       species.find((sp) => sp.id === data.pet.species)?.name ?? "สัตว์เลี้ยง";
+  const clearCelebrate = useCallback(() => setCelebrate(0), []);
   function datePicker() {
     return (
       <View style={s.datePicker}>
@@ -649,11 +655,13 @@ function AmHealtyApp() {
                         accessibilityLabel={`${petName} ${shapeLabel[shape]} ${moodText[mood]}`}
                         style={{ alignItems: "center", paddingTop: 14 }}
                       >
-                        <PetAvatar
+                        <PetStage
                           species={data.pet.species}
                           shape={shape}
                           mood={mood}
                           size={desktop ? 172 : 146}
+                          celebrate={celebrate}
+                          onCelebrated={clearCelebrate}
                         />
                       </View>
                       <T
