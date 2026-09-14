@@ -65,6 +65,12 @@ import { PetAvatar } from "./src/PetAvatar";
 import { PetStage } from "./src/PetStage";
 import { Onboarding } from "./src/Onboarding";
 import {
+  activities,
+  goals,
+  paces,
+  sexes,
+} from "./src/onboarding.ts";
+import {
   MAX_PET_NAME,
   cleanPetName,
   moodText,
@@ -296,6 +302,7 @@ function AmHealtyApp() {
     [unit, setUnit] = useState<"serving" | "grams">("serving"),
     [meal, setMeal] = useState<Meal>("กลางวัน"),
     [error, setError] = useState("");
+  const [answersOpen, setAnswersOpen] = useState(false);
   const [petOpen, setPetOpen] = useState(false),
     [petNameDraft, setPetNameDraft] = useState(""),
     [petError, setPetError] = useState("");
@@ -430,6 +437,33 @@ function AmHealtyApp() {
     setPetNameDraft(data.pet.name ?? "");
     setPetError("");
     setPetOpen(true);
+  }
+  function applyAnswers(
+    profile: Partial<Profile>,
+    pet: State["pet"],
+    weightKg: number,
+    message: string,
+  ) {
+    void commit((d) => ({
+      ...d,
+      profile: { ...d.profile, ...profile },
+      pet,
+      // The answers state a current weight, so it is recorded as today's
+      // weigh-in rather than asking for the same number twice.
+      weights: saveWeight(d.weights, dateKey(), weightKg),
+    }));
+    // The targets form is showing the old numbers; refresh what it holds.
+    setDraft((old) => ({
+      ...old,
+      ...Object.fromEntries(
+        editableTargets
+          .filter((k) => profile[k] !== undefined)
+          .map((k) => [k, String(profile[k])]),
+      ),
+    }));
+    setAnswersOpen(false);
+    setError("");
+    setToast(message);
   }
   function choosePet(next: PetSpecies) {
     // Keeps the sheet open so the preview updates while the name is still
@@ -569,25 +603,9 @@ function AmHealtyApp() {
         <StatusBar style="dark" />
         <Onboarding
           pet={data.pet}
-          onDone={(profile, pet, weightKg) => {
-            void commit((d) => ({
-              ...d,
-              profile: { ...d.profile, ...profile },
-              pet,
-              // The answers include a weigh-in, so the diary starts with one
-              // rather than asking for the same number again.
-              weights: saveWeight(d.weights, dateKey(), weightKg),
-            }));
-            setDraft((old) => ({
-              ...old,
-              ...Object.fromEntries(
-                editableTargets
-                  .filter((k) => profile[k] !== undefined)
-                  .map((k) => [k, String(profile[k])]),
-              ),
-            }));
-            setToast("ตั้งค่าเรียบร้อย เริ่มบันทึกมื้อแรกได้เลย");
-          }}
+          onDone={(profile, pet, weightKg) =>
+            applyAnswers(profile, pet, weightKg, "ตั้งค่าเรียบร้อย เริ่มบันทึกมื้อแรกได้เลย")
+          }
         />
       </SafeAreaView>
     );
@@ -1377,6 +1395,57 @@ function AmHealtyApp() {
               {tab === "profile" && (
                 <View style={{ gap: 20, marginTop: 28, maxWidth: 650 }}>
                   <Card>
+                    <View style={s.between}>
+                      <View style={s.row}>
+                        <Target size={21} color={C.green} />
+                        <T style={s.cardTitle}>คำตอบตอนเริ่มใช้แอป</T>
+                      </View>
+                    </View>
+                    <View style={{ marginTop: 16, gap: 10 }}>
+                      {(
+                        [
+                          [
+                            "เป้าหมาย",
+                            goals.find((g) => g.id === data.profile.goal)?.label,
+                          ],
+                          [
+                            "เพศ",
+                            sexes.find((x) => x.id === data.profile.sex)?.label,
+                          ],
+                          ["อายุ", `${data.profile.age} ปี`],
+                          ["ส่วนสูง", `${data.profile.height} ซม.`],
+                          [
+                            "การขยับตัว",
+                            activities.find((a) => a.id === data.profile.activity)
+                              ?.label,
+                          ],
+                          [
+                            "ความเร็ว",
+                            data.profile.goal === "lose" ||
+                            data.profile.goal === "gain"
+                              ? paces.find((x) => x.id === data.profile.pace)
+                                  ?.label
+                              : "ไม่ได้ตั้งเป้าขยับน้ำหนัก",
+                          ],
+                        ] as [string, string][]
+                      ).map(([label, value]) => (
+                        <View key={label} style={s.between}>
+                          <T style={s.caption}>{label}</T>
+                          <T style={s.label}>{value ?? "—"}</T>
+                        </View>
+                      ))}
+                    </View>
+                    <T style={[s.caption, { marginTop: 14, marginBottom: 16 }]}>
+                      ตอบใหม่แล้วแอปจะคำนวณเป้าหมายรายวันให้ใหม่ทั้งชุด
+                    </T>
+                    <Button
+                      label="ตอบคำถามใหม่"
+                      icon={Target}
+                      secondary
+                      onPress={() => setAnswersOpen(true)}
+                    />
+                  </Card>
+                  <Card>
                     <View style={s.row}>
                       <View style={s.avatar}>
                         <User color={C.green} size={26} />
@@ -1504,6 +1573,23 @@ function AmHealtyApp() {
           </T>
         </View>
       )}
+      <Modal
+        visible={answersOpen}
+        animationType="slide"
+        onRequestClose={() => setAnswersOpen(false)}
+      >
+        <SafeAreaView style={s.root}>
+          <Onboarding
+            pet={data.pet}
+            profile={data.profile}
+            weightKg={latest?.value}
+            onCancel={() => setAnswersOpen(false)}
+            onDone={(profile, pet, weightKg) =>
+              applyAnswers(profile, pet, weightKg, "อัปเดตเป้าหมายใหม่แล้ว")
+            }
+          />
+        </SafeAreaView>
+      </Modal>
       <Modal
         transparent
         visible={petOpen}
