@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Check, ChevronLeft, Minus, Plus } from "lucide-react-native";
+import { Check, ChevronLeft, Minus, Plus, X } from "lucide-react-native";
 import { C, s } from "./styles.ts";
 import { PetAvatar } from "./PetAvatar.tsx";
 import {
@@ -178,19 +178,35 @@ function Readout({
 
 export function Onboarding({
   pet,
+  profile,
+  weightKg,
   onDone,
+  onCancel,
 }: {
   pet: Pet;
+  /** Current answers, so revisiting the questions starts from them. */
+  profile?: Profile;
+  /** Latest weigh-in, which is the honest starting point for the weight step. */
+  weightKg?: number;
   onDone: (profile: Partial<Profile>, pet: Pet, weightKg: number) => void;
+  /** Supplied only when the questions are being revisited, never at setup. */
+  onCancel?: () => void;
 }) {
-  const [goal, setGoal] = useState<Goal>("health");
-  const [sex, setSex] = useState<Sex>("unspecified");
-  const [activity, setActivity] = useState<Activity>("light");
-  const [pace, setPace] = useState<Pace>("steady");
-  const [age, setAge] = useState("30");
-  const [height, setHeight] = useState("165");
-  const [weight, setWeight] = useState("65");
-  const [targetWeight, setTargetWeight] = useState("65");
+  const startWeight = String(
+    weightKg ?? profile?.targetWeight ?? 65,
+  );
+  const [goal, setGoal] = useState<Goal>(profile?.goal ?? "health");
+  const [sex, setSex] = useState<Sex>(profile?.sex ?? "unspecified");
+  const [activity, setActivity] = useState<Activity>(
+    profile?.activity ?? "light",
+  );
+  const [pace, setPace] = useState<Pace>(profile?.pace ?? "steady");
+  const [age, setAge] = useState(String(profile?.age ?? 30));
+  const [height, setHeight] = useState(String(profile?.height ?? 165));
+  const [weight, setWeight] = useState(startWeight);
+  const [targetWeight, setTargetWeight] = useState(
+    String(profile?.targetWeight ?? startWeight),
+  );
   const [petSpecies, setPetSpecies] = useState<PetSpecies>(pet.species);
   const [petName, setPetName] = useState(pet.name ?? "");
   const [index, setIndex] = useState(0);
@@ -312,6 +328,16 @@ export function Onboarding({
         <Text style={[s.text, s.label]}>
           {index + 1} / {order.length}
         </Text>
+        {!!onCancel && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="ปิดหน้าต่าง"
+            onPress={onCancel}
+            style={s.iconButton}
+          >
+            <X size={21} color={C.muted} />
+          </Pressable>
+        )}
       </View>
 
       <ScrollView
@@ -551,8 +577,12 @@ export function Onboarding({
         {step === "plan" && (
           <>
             <Title
-              title="แผนของคุณพร้อมแล้ว"
-              detail="ปรับตัวเลขทั้งหมดนี้ได้ทีหลังในแท็บโปรไฟล์"
+              title={onCancel ? "เป้าหมายใหม่ของคุณ" : "แผนของคุณพร้อมแล้ว"}
+              detail={
+                onCancel
+                  ? "บันทึกแล้วจะแทนที่เป้าหมายรายวันเดิม รวมถึงตัวเลขที่เคยปรับเอง"
+                  : "ปรับตัวเลขทั้งหมดนี้ได้ทีหลังในแท็บโปรไฟล์"
+              }
             />
             {(() => {
               const t = targets(answers);
@@ -623,7 +653,11 @@ export function Onboarding({
         >
           <Check size={19} color="white" />
           <Text style={[s.text, s.buttonText]}>
-            {step === "plan" ? "เริ่มใช้งาน" : "ดำเนินการต่อ"}
+            {step !== "plan"
+              ? "ดำเนินการต่อ"
+              : onCancel
+                ? "บันทึกเป้าหมายใหม่"
+                : "เริ่มใช้งาน"}
           </Text>
         </Pressable>
       </View>
