@@ -324,6 +324,23 @@ export const s = StyleSheet.create({
     borderRadius: 24,
     overflow: "hidden",
   },
+  petGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "center",
+  },
+  petChoice: {
+    // Percentage rather than a fixed width so the grid stays two-up on a phone.
+    width: "47%",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: C.border,
+    backgroundColor: C.white,
+  },
   summary: { backgroundColor: C.soft, borderRadius: 15, padding: 18 },
   error: { color: "#A34337", fontSize: 13, lineHeight: 23 },
   notice: {
