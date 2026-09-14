@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  MAX_PET_NAME,
+  cleanPetName,
   defaultPet,
   isPetSpecies,
   petMood,
   petShape,
+  petTitle,
   shapeWidth,
   shade,
   species,
@@ -121,4 +124,47 @@ test("every species shades without throwing, so no avatar can fail to draw", () 
 test("shading rejects anything that is not a #rrggbb colour", () => {
   for (const bad of ["red", "#fff", "#GGGGGG", "", "#1234567"])
     assert.throws(() => shade(bad, 0.2));
+});
+
+test("a typed name is trimmed, and a blank one means no name at all", () => {
+  assert.equal(cleanPetName("  มะลิ  "), "มะลิ");
+  assert.equal(cleanPetName(""), undefined);
+  assert.equal(cleanPetName("   "), undefined);
+  assert.equal(cleanPetName("\n\t"), undefined);
+});
+
+test("a name longer than the limit is refused, not silently truncated", () => {
+  const ok = "ก".repeat(MAX_PET_NAME);
+  assert.equal(cleanPetName(ok), ok);
+  assert.throws(() => cleanPetName("ก".repeat(MAX_PET_NAME + 1)), /ไม่เกิน/);
+  // Padding does not count against the limit, since it is trimmed first.
+  assert.equal(cleanPetName(`  ${ok}  `), ok);
+});
+
+test("an unnamed pet keeps the generic heading rather than its species", () => {
+  assert.equal(petTitle({ species: "cat" }), "เพื่อนร่วมทาง");
+  assert.equal(petTitle({ species: "cat", name: "มะลิ" }), "มะลิ");
+});
+
+test("a name survives a save and reload", () => {
+  const saved = { ...initialState, pet: { species: "bear", name: "หมีน้อย" } };
+  assert.equal(parseState(JSON.stringify(saved)).pet.name, "หมีน้อย");
+});
+
+test("a diary from before naming existed still loads, with no name", () => {
+  const parsed = parseState(
+    JSON.stringify({ ...initialState, pet: { species: "rabbit" } }),
+  );
+  assert.equal(parsed.pet.name, undefined);
+  assert.equal(petTitle(parsed.pet), "เพื่อนร่วมทาง");
+});
+
+test("a stored name that is empty or oversized is rejected, not shown", () => {
+  for (const name of ["", "   ", "ก".repeat(MAX_PET_NAME + 1), 42, null])
+    assert.throws(
+      () =>
+        parseState(JSON.stringify({ ...initialState, pet: { species: "cat", name } })),
+      /ข้อมูลที่บันทึกไว้ไม่ถูกต้อง/,
+      `should reject ${JSON.stringify(name)}`,
+    );
 });

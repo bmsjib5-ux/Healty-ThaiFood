@@ -1,4 +1,9 @@
-import { defaultPet, isPetSpecies, type Pet } from "./pet.ts";
+import {
+  defaultPet,
+  isPetName,
+  isPetSpecies,
+  type Pet,
+} from "./pet.ts";
 export type Food = {
   id: string;
   name: string;
@@ -276,6 +281,7 @@ export function parseState(raw: string): State {
     !s.pet ||
     typeof s.pet !== "object" ||
     !isPetSpecies(s.pet.species) ||
+    (s.pet.name !== undefined && !isPetName(s.pet.name)) ||
     typeof s.profile?.name !== "string" ||
     !["calories", "protein", "carbs", "fat", "water", "targetWeight"].every(
       (k) => positive(s.profile[k]),
