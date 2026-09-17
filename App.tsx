@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   AppState,
@@ -24,6 +30,7 @@ import {
   BarChart3,
   Camera,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Droplets,
@@ -199,6 +206,8 @@ function Field({
     </View>
   );
 }
+/** How many food cards are added to the list at a time. */
+const FOOD_PAGE = 24;
 function Chip({
   label,
   active,
@@ -298,6 +307,10 @@ function AmHealtyApp() {
     [toast, setToast] = useState("");
   const [query, setQuery] = useState(""),
     [filter, setFilter] = useState("ทั้งหมด"),
+    // The catalogue is several hundred items deep. Rendering every match at
+    // once froze the main thread for seconds on a phone, so the list grows a
+    // page at a time as it is scrolled.
+    [foodLimit, setFoodLimit] = useState(FOOD_PAGE),
     [selected, setSelected] = useState<Food | null>(null),
     [amount, setAmount] = useState("1"),
     [unit, setUnit] = useState<"serving" | "grams">("serving"),
@@ -357,6 +370,14 @@ function AmHealtyApp() {
           "อ่านข้อมูลในเครื่องไม่สำเร็จ กรุณาปิดแล้วเปิดแอปใหม่ ข้อมูลเดิมยังไม่ถูกเขียนทับ",
         ),
       );
+  }, []);
+  // A font download that stalls used to hold the opening screen on its spinner
+  // for as long as the network took. The app now opens in the system font and
+  // swaps the Thai font in whenever it arrives.
+  const [fontsSlow, setFontsSlow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFontsSlow(true), 4000);
+    return () => clearTimeout(t);
   }, []);
   useEffect(() => {
     if (!toast) return;
@@ -527,9 +548,16 @@ function AmHealtyApp() {
     water = data.water[day] ?? 0,
     latest = data.weights.at(-1),
     first = data.weights[0];
+  // Rebuilding the list is the expensive part of a keystroke, so the typed text
+  // lands in the box immediately and the results catch up in the background
+  // instead of blocking the keyboard.
+  const search = useDeferredValue(query);
+  // A new search or category starts from the top of a fresh page, otherwise a
+  // list grown to 300 cards would stay grown after the filter narrows it.
+  useEffect(() => setFoodLimit(FOOD_PAGE), [search, filter, tab]);
   const shownFoods = catalog.filter(
     (f) =>
-      f.name.includes(query.trim()) &&
+      f.name.includes(search.trim()) &&
       (filter === "ทั้งหมด" ||
         (filter === "รายการโปรด"
           ? data.favorites.includes(f.id)
@@ -583,7 +611,7 @@ function AmHealtyApp() {
       </View>
     );
   }
-  if (!ready || (!fontsLoaded && !fontError))
+  if (!ready || (!fontsLoaded && !fontError && !fontsSlow))
     return (
       <View style={[s.root, s.center]}>
         <Leaf color={C.green} size={38} />
@@ -666,6 +694,24 @@ function AmHealtyApp() {
           <ScrollView
             ref={scroll}
             keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
+            onScroll={
+              tab === "food"
+                ? (e) => {
+                    const { contentOffset, layoutMeasurement, contentSize } =
+                      e.nativeEvent;
+                    if (
+                      contentOffset.y + layoutMeasurement.height >=
+                      contentSize.height - 700
+                    )
+                      // Returning the same number lets React skip the render
+                      // once the whole list is out.
+                      setFoodLimit((n) =>
+                        n >= shownFoods.length ? n : n + FOOD_PAGE,
+                      );
+                  }
+                : undefined
+            }
             contentContainerStyle={[
               s.content,
               desktop && { paddingHorizontal: 42, paddingTop: 35 },
@@ -1200,7 +1246,7 @@ function AmHealtyApp() {
                       !desktop && { flexDirection: "column" },
                     ]}
                   >
-                    {shownFoods.map((f) => (
+                    {shownFoods.slice(0, foodLimit).map((f) => (
                       <View
                         key={f.id}
                         style={[s.foodCard, desktop && { width: "48.7%" }]}
@@ -1257,6 +1303,14 @@ function AmHealtyApp() {
                       </View>
                     ))}
                   </View>
+                  {shownFoods.length > foodLimit && (
+                    <Button
+                      label={`ดูเพิ่มอีก ${Math.min(FOOD_PAGE, shownFoods.length - foodLimit)} รายการ`}
+                      secondary
+                      icon={ChevronDown}
+                      onPress={() => setFoodLimit((n) => n + FOOD_PAGE)}
+                    />
+                  )}
                   {shownFoods.length === 0 && (
                     <Empty
                       title="ยังไม่พบอาหาร"
