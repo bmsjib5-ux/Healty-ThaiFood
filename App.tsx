@@ -207,7 +207,7 @@ function Field({
   );
 }
 /** How many food cards are added to the list at a time. */
-const FOOD_PAGE = 24;
+const FOOD_PAGE = 16;
 function Chip({
   label,
   active,
@@ -1321,7 +1321,7 @@ function AmHealtyApp() {
                     ข้อมูลอาหารเริ่มต้น {foods.length}{" "}
                     รายการเป็นค่าประมาณต่อหน่วยบริโภค
                     สูตรและวัตถุดิบอาจทำให้ค่าแตกต่างกัน
-                    ภาพอาหารเริ่มต้นเป็นภาพสมจริงที่สร้างด้วย AI
+                    ภาพประกอบเป็นภาพวาดตามชนิดของอาหาร ไม่ใช่ภาพถ่ายของจานจริง
                   </T>
                 </View>
               )}
