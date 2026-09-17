@@ -34,7 +34,7 @@ type Props = {
 const emptyDraft: FoodDraft = {
   name: "",
   unit: "จาน",
-  category: "อาหารจานเดียว",
+  category: "อาหารตามสั่ง",
   grams: "",
   kcal: "",
   protein: "",

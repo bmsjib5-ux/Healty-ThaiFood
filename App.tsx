@@ -49,6 +49,7 @@ import {
   Profile,
   State,
   dateKey,
+  foodCategories,
   foods,
   initialState,
   meals,
@@ -1172,14 +1173,13 @@ function AmHealtyApp() {
                       contentContainerStyle={{ gap: 8, marginTop: 15 }}
                     >
                       {[
+                        // Built from foodCategories rather than repeated here:
+                        // the hardcoded copy silently kept showing the old names
+                        // after the catalogue was recategorised.
                         "ทั้งหมด",
                         "รายการโปรด",
                         "อาหารของฉัน",
-                        "อาหารจานเดียว",
-                        "กับข้าว",
-                        "ข้าวและแป้ง",
-                        "ผลไม้",
-                        "ของว่าง",
+                        ...foodCategories,
                       ].map((c) => (
                         <Chip
                           key={c}
