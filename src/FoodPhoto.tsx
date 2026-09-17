@@ -77,6 +77,11 @@ export function FoodPhoto({ food, size = 80 }: { food: Food; size?: number }) {
             top: -Math.floor(index / 4) * size,
           }}
         />
+      ) : food.emoji ? (
+        // The catalogue is hundreds of items deep and the sprite sheet only
+        // covers the original twelve, so everything else shows its emoji rather
+        // than a wall of identical camera icons.
+        <Text style={{ fontSize: Math.round(size * 0.52) }}>{food.emoji}</Text>
       ) : (
         <>
           <Camera size={size < 60 ? 20 : 28} color={C.muted} />

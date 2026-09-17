@@ -10,10 +10,11 @@ import {
   shiftDate,
   dateKey,
   createCustomFood,
+  foodCategories,
 } from "../src/model.ts";
 const customDraft = {
   name: "ข้าวผัดทำเอง",
-  category: "อาหารจานเดียว",
+  category: "อาหารตามสั่ง",
   unit: "จาน",
   grams: "250",
   kcal: "400",
@@ -179,4 +180,65 @@ test("date navigation handles month/year boundaries and leap days", () => {
   assert.equal(shiftDate("2026-01-01", -1), "2025-12-31");
   assert.equal(shiftDate("2024-03-01", -1), "2024-02-29");
   assert.equal(dateKey(new Date(2026, 8, 13, 0, 1)), "2026-09-13");
+});
+
+test("a custom food saved under an old category name is migrated, not rejected", () => {
+  // Before the catalogue grew, these were the category names. A saved custom
+  // food carrying one must not take the whole diary down with it.
+  const old = [
+    ["อาหารจานเดียว", "อาหารตามสั่ง"],
+    ["กับข้าว", "อาหารตามสั่ง"],
+    ["ข้าวและแป้ง", "อื่นๆ"],
+    ["ผลไม้", "ผัก ผลไม้"],
+    ["ของว่าง", "อื่นๆ"],
+  ];
+  for (const [before, after] of old) {
+    const saved = {
+      ...initialState,
+      customFoods: [
+        {
+          id: "custom-legacy",
+          name: "ของเก่า",
+          emoji: "🍽️",
+          category: before,
+          grams: 100,
+          unit: "จาน",
+          kcal: 200,
+          protein: 10,
+          carbs: 20,
+          fat: 8,
+        },
+      ],
+    };
+    const parsed = parseState(JSON.stringify(saved));
+    assert.equal(parsed.customFoods[0].category, after, `${before} -> ${after}`);
+  }
+});
+
+test("the shipped catalogue is large, unique and internally consistent", () => {
+  assert.ok(foods.length >= 300, `only ${foods.length} foods`);
+  assert.equal(new Set(foods.map((f) => f.id)).size, foods.length);
+  assert.equal(new Set(foods.map((f) => f.name)).size, foods.length);
+  for (const f of foods) {
+    assert.ok(foodCategories.includes(f.category), `${f.id}: ${f.category}`);
+    assert.ok(f.grams > 0 && f.unit.length > 0, f.id);
+    assert.ok(f.emoji.length > 0, `${f.id} has no emoji to fall back on`);
+    for (const k of ["kcal", "protein", "carbs", "fat"])
+      assert.ok(Number.isFinite(f[k]) && f[k] >= 0, `${f.id}.${k}`);
+    // Energy and macros have to agree, or the ring and the bars tell different
+    // stories about the same meal.
+    const derived = f.protein * 4 + f.carbs * 4 + f.fat * 9;
+    assert.ok(
+      Math.abs(derived - f.kcal) <= Math.max(12, f.kcal * 0.08),
+      `${f.id}: ${f.kcal} kcal vs ${derived.toFixed(0)} from macros`,
+    );
+  }
+});
+
+test("every category is represented in the catalogue", () => {
+  for (const c of foodCategories)
+    assert.ok(
+      foods.some((f) => f.category === c),
+      `nothing in ${c}`,
+    );
 });

@@ -1,3 +1,4 @@
+import { catalogue } from "./foods.ts";
 import {
   defaultPet,
   isPetName,
@@ -30,153 +31,7 @@ export type Food = {
 };
 export type Meal = "เช้า" | "กลางวัน" | "เย็น" | "ของว่าง";
 export const meals: Meal[] = ["เช้า", "กลางวัน", "เย็น", "ของว่าง"];
-// Starter estimates per stated serving; recipes and brands vary. Not a verified food database.
-export const foods: Food[] = [
-  {
-    id: "basil",
-    name: "ข้าวกะเพราไก่",
-    emoji: "🍛",
-    category: "อาหารจานเดียว",
-    grams: 300,
-    unit: "จาน",
-    kcal: 480,
-    protein: 25,
-    carbs: 62,
-    fat: 15,
-  },
-  {
-    id: "papaya",
-    name: "ส้มตำไทย",
-    emoji: "🥗",
-    category: "กับข้าว",
-    grams: 150,
-    unit: "จาน",
-    kcal: 120,
-    protein: 3,
-    carbs: 23,
-    fat: 2,
-  },
-  {
-    id: "chicken",
-    name: "อกไก่ย่าง",
-    emoji: "🍗",
-    category: "กับข้าว",
-    grams: 100,
-    unit: "ชิ้น",
-    kcal: 165,
-    protein: 31,
-    carbs: 0,
-    fat: 3.6,
-  },
-  {
-    id: "rice",
-    name: "ข้าวสวย",
-    emoji: "🍚",
-    category: "ข้าวและแป้ง",
-    grams: 80,
-    unit: "ทัพพี",
-    kcal: 104,
-    protein: 2.2,
-    carbs: 22.6,
-    fat: 0.2,
-  },
-  {
-    id: "egg",
-    name: "ไข่ต้ม",
-    emoji: "🥚",
-    category: "กับข้าว",
-    grams: 50,
-    unit: "ฟอง",
-    kcal: 78,
-    protein: 6.3,
-    carbs: 0.6,
-    fat: 5.3,
-  },
-  {
-    id: "banana",
-    name: "กล้วยหอม",
-    emoji: "🍌",
-    category: "ผลไม้",
-    grams: 120,
-    unit: "ลูก",
-    kcal: 107,
-    protein: 1.3,
-    carbs: 27.4,
-    fat: 0.4,
-  },
-  {
-    id: "noodle",
-    name: "ก๋วยเตี๋ยวน้ำใส",
-    emoji: "🍜",
-    category: "อาหารจานเดียว",
-    grams: 350,
-    unit: "ชาม",
-    kcal: 320,
-    protein: 18,
-    carbs: 45,
-    fat: 8,
-  },
-  {
-    id: "salmon",
-    name: "แซลมอนย่าง",
-    emoji: "🐟",
-    category: "กับข้าว",
-    grams: 100,
-    unit: "ชิ้น",
-    kcal: 208,
-    protein: 20,
-    carbs: 0,
-    fat: 13,
-  },
-  {
-    id: "yogurt",
-    name: "โยเกิร์ตรสธรรมชาติ",
-    emoji: "🥛",
-    category: "ของว่าง",
-    grams: 135,
-    unit: "ถ้วย",
-    kcal: 90,
-    protein: 5,
-    carbs: 12,
-    fat: 2.5,
-  },
-  {
-    id: "apple",
-    name: "แอปเปิล",
-    emoji: "🍎",
-    category: "ผลไม้",
-    grams: 180,
-    unit: "ลูก",
-    kcal: 95,
-    protein: 0.5,
-    carbs: 25,
-    fat: 0.3,
-  },
-  {
-    id: "oats",
-    name: "ข้าวโอ๊ต",
-    emoji: "🥣",
-    category: "ข้าวและแป้ง",
-    grams: 40,
-    unit: "ถ้วยเล็ก",
-    kcal: 156,
-    protein: 6.8,
-    carbs: 26.5,
-    fat: 2.8,
-  },
-  {
-    id: "tofu",
-    name: "เต้าหู้ขาว",
-    emoji: "🧊",
-    category: "กับข้าว",
-    grams: 100,
-    unit: "ชิ้น",
-    kcal: 76,
-    protein: 8,
-    carbs: 1.9,
-    fat: 4.8,
-  },
-];
+export const foods: Food[] = catalogue;
 export type Entry = {
   id: string;
   date: string;
@@ -307,6 +162,10 @@ export function parseState(raw: string): State {
       ...s.profile,
       onboarded: true,
     };
+  if (Array.isArray(s?.customFoods))
+    for (const f of s.customFoods)
+      if (f && renamedCategories[f.category])
+        f.category = renamedCategories[f.category];
   if (!Array.isArray(s?.customFoods) || !s.customFoods.every(validCustomFood))
     throw Error("รายการอาหารที่บันทึกไว้ไม่ถูกต้อง");
   const catalog = [...foods, ...s.customFoods];
@@ -360,12 +219,22 @@ export function parseState(raw: string): State {
 }
 
 export const foodCategories = [
-  "อาหารจานเดียว",
-  "กับข้าว",
-  "ข้าวและแป้ง",
-  "ผลไม้",
-  "ของว่าง",
+  "อาหารตามสั่ง",
+  "ผัก ผลไม้",
+  "เนื้อสัตว์",
+  "นม ไข่",
+  "อื่นๆ",
 ];
+// The categories were renamed once the catalogue grew. A custom food carrying
+// an old name would fail validCustomFood and take the whole diary down with it,
+// so saved entries are mapped forward on load rather than rejected.
+const renamedCategories: Record<string, string> = {
+  อาหารจานเดียว: "อาหารตามสั่ง",
+  กับข้าว: "อาหารตามสั่ง",
+  ข้าวและแป้ง: "อื่นๆ",
+  ผลไม้: "ผัก ผลไม้",
+  ของว่าง: "อื่นๆ",
+};
 export type FoodDraft = {
   name: string;
   unit: string;
