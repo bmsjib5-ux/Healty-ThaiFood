@@ -1,3 +1,5 @@
+import { shade } from "./color.ts";
+export { shade };
 // The avatar mirrors the diary: its build follows weight against the target,
 // its mood follows how much of today's energy goal has been eaten.
 export type PetSpecies = "cat" | "rabbit" | "bear" | "penguin";
@@ -117,16 +119,3 @@ export const shapeWidth: Record<PetShape, number> = {
 // Lightens (amount > 0) or darkens (amount < 0) a #rrggbb colour. Shading is
 // derived from each species' own fur rather than stored as extra palette
 // entries, so the lit and shadowed sides always stay in the same hue family.
-export function shade(hex: string, amount: number): string {
-  const m = /^#([0-9a-fA-F]{6})$/.exec(hex);
-  if (!m) throw Error("ต้องเป็นสีแบบ #rrggbb");
-  const n = parseInt(m[1], 16);
-  const mix = (channel: number) =>
-    Math.round(
-      amount >= 0
-        ? channel + (255 - channel) * Math.min(1, amount)
-        : channel * (1 + Math.max(-1, amount)),
-    );
-  const out = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(mix);
-  return "#" + out.map((c) => c.toString(16).padStart(2, "0")).join("");
-}

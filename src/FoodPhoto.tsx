@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Image, View, Text } from "react-native";
-import { Camera } from "lucide-react-native";
+import { Image, View } from "react-native";
 import { Food } from "./model";
+import { FoodArt } from "./FoodArt";
 import { loadPhoto, releasePhoto } from "./photos";
-import { C, s } from "./styles";
+import { C } from "./styles";
 const atlas = require("../assets/food-atlas.png");
 const positions = [
   "basil",
@@ -19,7 +19,7 @@ const positions = [
   "oats",
   "tofu",
 ];
-export function FoodPhoto({ food, size = 80 }: { food: Food; size?: number }) {
+function Photo({ food, size = 80 }: { food: Food; size?: number }) {
   const [uri, setUri] = useState<string | null>(null),
     [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -77,19 +77,17 @@ export function FoodPhoto({ food, size = 80 }: { food: Food; size?: number }) {
             top: -Math.floor(index / 4) * size,
           }}
         />
-      ) : food.emoji ? (
-        // The catalogue is hundreds of items deep and the sprite sheet only
-        // covers the original twelve, so everything else shows its emoji rather
-        // than a wall of identical camera icons.
-        <Text style={{ fontSize: Math.round(size * 0.52) }}>{food.emoji}</Text>
       ) : (
-        <>
-          <Camera size={size < 60 ? 20 : 28} color={C.muted} />
-          {size >= 80 && (
-            <Text style={[s.caption, { fontSize: 10 }]}>ไม่มีรูปภาพ</Text>
-          )}
-        </>
+        // The sprite sheet only covers the original twelve. Everything else is
+        // drawn — a plate, a bowl, a glass — rather than shown as an emoji,
+        // which read as clip art once there were hundreds of them.
+        <FoodArt food={food} size={size} />
       )}
     </View>
   );
 }
+
+// The drawing is the most expensive thing on a food card, and a keystroke in
+// the search box re-renders every card that is still on screen. Memoising it
+// means only the cards that actually changed food are redrawn.
+export const FoodPhoto = React.memo(Photo);

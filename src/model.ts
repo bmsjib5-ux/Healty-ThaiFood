@@ -223,6 +223,7 @@ export const foodCategories = [
   "ผัก ผลไม้",
   "เนื้อสัตว์",
   "นม ไข่",
+  "เครื่องดื่ม",
   "อื่นๆ",
 ];
 // The categories were renamed once the catalogue grew. A custom food carrying
